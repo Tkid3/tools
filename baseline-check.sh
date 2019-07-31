@@ -171,22 +171,22 @@ fi
 #项目：帐号与口令-远程连接的安全性配置
 #合格：Y;不合格：N
 
-# echo "7.远程连接的安全性配置..."
-# echo "***************************"
+echo "7.远程连接的安全性配置..."
+echo "***************************"
 
-# echo "6.远程连接的安全性配置:" >> ${Result}
-# fileNetrc=`find / -xdev -mount -name .netrc -print 2> /dev/null`
-# if [  -z "${fileNetrc}" ];then
-#   echo "Y:不存在.netrc文件，符合要求" >> ${Result}
-# else
-#   echo "N:存在.netrc文件，不符合要求" >> ${Result}
-# fi
-# fileRhosts=`find / -xdev -mount -name .rhosts -print 2> /dev/null`
-# if [ -z "$fileRhosts" ];then
-#   echo "Y:不存在.rhosts文件，符合要求" >> ${Result}
-# else
-#   echo "N:存在.rhosts文件，不符合要求" >> ${Result}
-# fi
+echo "6.远程连接的安全性配置:" >> ${Result}
+fileNetrc=`find / -xdev -mount -name .netrc -print 2> /dev/null`
+if [  -z "${fileNetrc}" ];then
+ echo "Y:不存在.netrc文件，符合要求" >> ${Result}
+else
+  echo "N:存在.netrc文件，不符合要求" >> ${Result}
+fi
+ fileRhosts=`find / -xdev -mount -name .rhosts -print 2> /dev/null`
+if [ -z "$fileRhosts" ];then
+   echo "Y:不存在.rhosts文件，符合要求" >> ${Result}
+else
+   echo "N:存在.rhosts文件，不符合要求" >> ${Result}
+fi
 
 #项目：帐号与口令-用户的umask安全配置
 #合格：Y;不合格：N
