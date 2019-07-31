@@ -1,4 +1,4 @@
-# baseline-check
+# #baseline-check
  基于centos7的基线检查脚本
 
     当前包含的检查项：
