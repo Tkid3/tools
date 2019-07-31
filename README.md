@@ -1,5 +1,5 @@
-#baseline-check
-基于centos7的基线检查脚本
+# baseline-check
+ 基于centos7的基线检查脚本
 
     当前包含的检查项：
     - 账号策略检查
