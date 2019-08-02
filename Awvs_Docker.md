@@ -2,14 +2,14 @@
 
 官方默认不支持centos，所以需要ubuntu的系统。
 
-1. Ubuntu安装依赖包：
+1.Ubuntu安装依赖包：
 
 ```bash
 apt-get install libxdamage1 libgtk-3-0 libasound2 libnss3 libxss1 libx11-xcb-dev
 ```
 
-2. 官网下载demo，安装，登陆后台。(地址填服务器ip)
-3. 下载破解补丁patch_awvs，放到/home/acunetix/.acunetix_trial/v_190409112/scanner/。执行patch_awvs
+2.官网下载demo，安装，登陆后台。(地址填服务器ip)
+3.下载破解补丁patch_awvs，放到/home/acunetix/.acunetix_trial/v_190409112/scanner/。执行patch_awvs
 
 ```bash
 sudo chmod -R 777   /home/acunetix/.acunetix_trial/v_190703137/scanner/
