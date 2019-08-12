@@ -20,8 +20,8 @@
     - 检查系统core dump状态
     - 检查系统日志读写权限
     
-    吐槽:  1. 还有很多项的规则没加  
-           2. 多个find会大幅消耗cpu
+  吐槽:  1. 还有很多项的规则没加  
+       ~~2. 多个find会大幅消耗cpu~~
            
 #  #awvs-docker
 [awvs by docker](https://github.com/Tkid3/tools/blob/master/Awvs_Docker.md)           
