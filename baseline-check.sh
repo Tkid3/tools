@@ -1,5 +1,5 @@
 #!/bin/bash 
-#vesion 1.0
+#vesion 1.1
 #author by Tkid3
 
 time=`date  +'%Y-%m-%d'`
@@ -13,10 +13,10 @@ cat <<EOF
  ) ,\ /__\ \__ \ ) _) )(__  )(  )  (  ) _)  ( (_  )__(  ) _)( (_  )  \ 
 (___/(_)(_)(___/(___)(____)(__)(_)\_)(___)   \__)(_)(_)(___) \__)(_)\_)
 
-*****               linux基线检查脚本
+*****               Centos7基线检查脚本
 *****               Author(Tkid3)
-*****        
-*****               输出结果： ${Result}             
+*****
+*****               输出结果: ${Result}
 *************************************************************************************
 EOF
 
@@ -37,7 +37,6 @@ echo "***************************"
 #项目：帐号与口令-用户口令设置
 #合格：Y;不合格：N
 
-
 passmax=`cat /etc/login.defs | grep PASS_MAX_DAYS | grep -v ^# | awk '{print $2}'`
 passmin=`cat /etc/login.defs | grep PASS_MIN_DAYS | grep -v ^# | awk '{print $2}'`
 passlen=`cat /etc/login.defs | grep PASS_MIN_LEN | grep -v ^# | awk '{print $2}'`
@@ -50,7 +49,7 @@ else
   echo "N:口令生存周期为${passmax}天，不符合要求,建议设置不大于90天" >> ${Result}
 fi
 
-if [ $passmin -ge 6 ];then
+ if [ $passmin -ge 6 ];then
   echo "Y:口令更改最小时间间隔为${passmin}天，符合要求" >> ${Result}
 else
   echo "N:口令更改最小时间间隔为${passmin}天，不符合要求，建议设置大于等于6天" >> ${Result}
@@ -70,8 +69,18 @@ fi
 
 echo "2.账号是否会主动注销检查中..."
 echo "***************************"
-checkTimeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
-if [ $? -ne 0 ];then
+
+echo "2.账号是否会主动注销检查:" >> ${Result}
+profileTimeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
+if [ ${user_id} = "root" ];then
+    user_file="/root"
+else
+    user_file="/home/${user_id}"
+fi
+
+bashrcTimeout=$(cat ${user_file}/.bashrc | grep TMOUT | awk -F[=] '{print $2}' 2>/dev/null)
+bash_profileTimeout=$(cat ${user_file}/.bash_profile | grep TMOUT | awk -F[=] '{print $2}' 2>/dev/null)
+if [[ ${profileTimeout} -ne 0 ]] && [[ ${bashrcTimeout} -ne 0 ]] && [[ ${bash_profileTimeout} -ne 0 ]];then
   TMOUT=`cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}'`
   if [ $TMOUT -le 600 -a $TMOUT -ge 10 ];then
     echo "Y:账号超时时间${TMOUT}秒,符合要求" >> ${Result}
@@ -86,12 +95,11 @@ fi
 #项目：帐号与口令-root用户远程登录限制
 #合格：Y;不合格：N
 
-
 echo "3.ssh配置检查中..."
 echo "***************************"
 
-echo "2.ssh配置检查:" >> ${Result}
-remoteLogin=$(cat /etc/ssh/sshd_config | grep -v ^# |grep "PermitRootLogin no")
+echo "3.ssh配置检查:" >> ${Result}
+remoteLogin=`cat /etc/ssh/sshd_config | grep -v ^# |grep "PermitRootLogin no"`
 if [ $? -eq 0 ];then
   echo "Y:已经设置远程root不能登陆，符合要求" >> ${Result}
 else
@@ -105,6 +113,13 @@ else
   echo "N:未设置客户端闲置会话自动断开，不符合要求，建议/etc/ssh/sshd_config添加ClientAliveInterval 600" >> ${Result}
 fi
 
+Protocol2=`cat /etc/ssh/sshd_config | grep -v ^# | grep "Protocol 2"`
+if [ $? -eq 0 ];then
+    echo "Y:仅支持SSH-2协议，符合要求" >> ${Result}
+else
+    echo "N:支持SSH-1协议，不符合要求。建议/etc/ssh/sshd_config添加Protocol 2" >> ${Result}
+fi
+
 alivecountMax=`cat /etc/ssh/sshd_config | grep -v ^# | grep ClientAliveCountMax`
 if [ $? -eq 0 ];then
   echo "Y:已经设置最大连接数，符合要求" >> ${Result}
@@ -114,13 +129,12 @@ fi
 
 #项目：帐号与口令-检查是否存在除root之外UID为0的用户
 #合格：Y;不合格：N
-
 #查找非root账号UID为0的账号
 
 echo "4.是否存在除root之外UID为0的用户..."
 echo "***************************"
 
-echo "3.是否存在除root之外UID为0的用户:" >> ${Result}
+echo "4.是否存在除root之外UID为0的用户:" >> ${Result}
 UIDS=`awk -F[:] 'NR!=1{print $3}' /etc/passwd`
 flag=0
 for i in $UIDS
@@ -143,7 +157,7 @@ fi
 echo "5.检查telnet服务是否开启..."
 echo "***************************"
 
-echo "4.检查telnet服务是否开启:" >> ${Result}
+echo "5.检查telnet服务是否开启:" >> ${Result}
 telnetd=`ps -ef|grep telnet|grep -v grep`
 if [ $telnetd  ]; then
   echo "N:检测到telnet服务开启，不符合要求，建议关闭telnet" >> ${Result}
@@ -153,15 +167,14 @@ fi
 
 #项目：帐号与口令-root用户环境变量的安全性
 #合格：Y;不合格：N
-
 #检查目录权限是否为777
 
 echo "6.root用户环境变量的安全性..."
 echo "***************************"
 
-echo "5.root用户环境变量的安全性:" >> ${Result}
+echo "6.root用户环境变量的安全性:" >> ${Result}
 dirPri=$(find $(echo $PATH | tr ':' ' ') -type d \( -perm -0777 \) 2> /dev/null)
-if [  -z "$dirPri" ] 
+if [  -z "$dirPri" ]
 then
   echo "Y:目录权限无777的,符合要求" >> ${Result}
 else
@@ -170,18 +183,17 @@ fi
 
 #项目：帐号与口令-远程连接的安全性配置
 #合格：Y;不合格：N
-
 echo "7.远程连接的安全性配置..."
 echo "***************************"
 
-echo "6.远程连接的安全性配置:" >> ${Result}
-fileNetrc=`find / -xdev -mount -name .netrc -print 2> /dev/null`
-if [  -z "${fileNetrc}" ];then
+echo "7.远程连接的安全性配置:" >> ${Result}
+fileNetrc=`find /home /root -xdev -mount -name .netrc -print 2> /dev/null`
+if [ -z "${fileNetrc}" ];then
  echo "Y:不存在.netrc文件，符合要求" >> ${Result}
 else
   echo "N:存在.netrc文件，不符合要求" >> ${Result}
 fi
- fileRhosts=`find / -xdev -mount -name .rhosts -print 2> /dev/null`
+ fileRhosts=`find /home /root -xdev -mount -name .rhosts -print 2> /dev/null`
 if [ -z "$fileRhosts" ];then
    echo "Y:不存在.rhosts文件，符合要求" >> ${Result}
 else
@@ -190,13 +202,12 @@ fi
 
 #项目：帐号与口令-用户的umask安全配置
 #合格：Y;不合格：N
-
 #检查umask设置
 
 echo "8.用户的umask安全配置..."
 echo "***************************"
 
-echo "7.用户的umask安全配置:" >> ${Result}
+echo "8.用户的umask安全配置:" >> ${Result}
 
 umask1=`cat /etc/profile | grep umask | grep -v ^# | awk '{print $2}'`
 umask2=`cat /etc/csh.cshrc | grep umask | grep -v ^# | awk '{print $2}'`
@@ -212,7 +223,7 @@ do
 done
 if [ $flags == 0 ];then
   echo "Y:/etc/profile文件中所设置的umask为${i},符合要求" >> ${Result}
-fi 
+fi
 flags=0
 for i in $umask2
 do
@@ -221,7 +232,7 @@ do
     flags=1
     break
   fi
-done  
+done
 if [ $flags == 0 ];then
   echo "Y:/etc/csh.cshrc文件中所设置的umask为${i},符合要求" >> ${Result}
 fi
@@ -241,7 +252,7 @@ fi
 #项目：文件系统-重要目录和文件的权限设置
 #合格：Y;不合格：N
 
-echo "8.重要目录和文件的权限设置:" >> ${Result}
+echo "9.重要目录和文件的权限设置:" >> ${Result}
 echo "9.检查重要文件权限中..."
 echo "***************************"
 file1=`ls -l /etc/passwd | awk '{print $1}'`
@@ -287,8 +298,8 @@ fi
 echo "10.查找未授权的SUID/SGID文件中..."
 echo "***************************"
 
-echo "9.查找未授权的SUID/SGID文件:" >> ${Result}
-unauthorizedfile=`find / \( -perm -04000 -o -perm -02000 \) -type f 2>/dev/null`
+echo "10.查找未授权的SUID/SGID文件:" >> ${Result}
+unauthorizedfile=`find /usr /var \( -perm -04000 -o -perm -02000 \) -type f 2>/dev/null`
 echo "C:文件${unauthorizedfile}设置了SUID/SGID，请检查是否授权" >> ${Result}
 
 #项目：文件系统-检查任何人都有写权限的目录
@@ -297,27 +308,27 @@ echo "C:文件${unauthorizedfile}设置了SUID/SGID，请检查是否授权" >> 
 echo "11.检查任何人都有写权限的目录中..."
 echo "***************************"
 
-echo "10.检查任何人都有写权限的目录:" >> ${Result}
-checkWriteDre=$(find / -xdev -mount -type d \( -perm -0002 -a ! -perm -1000 \) 2> /dev/null)
+echo "11.检查任何人都有写权限的目录:" >> ${Result}
+checkWriteDre=$(find /usr /var -xdev -mount -type d \( -perm -0002 -a ! -perm -1000 \) 2> /dev/null)
 if [  -z "${checkWriteDre}" ];then
   echo "Y:不存在任何人都有写权限的目录，符合要求" >> ${Result}
 else
   echo "N:${checkWriteDre}目录任何人都可以写，不符合要求" >> ${Result}
 fi
-  
+
 #项目：文件系统-检查任何人都有写权限的文件
 #合格：Y;不合格：N;检查：C
 
 echo "12.检查任何人都有写权限的文件..."
 echo "***************************"
 
-echo "11.检查任何人都有写权限的文件:" >> ${Result}
-checkWriteFile=$(find / -xdev -mount -type f \( -perm -0002 -a ! -perm -1000 \) 2> /dev/null)
+echo "12.检查任何人都有写权限的文件:" >> ${Result}
+checkWriteFile=$(find /usr /var /home /root  -xdev -mount -type f \( -perm -0002 -a ! -perm -1000 \) 2> /dev/null)
 if [  -z "${checkWriteFile}" ];then
   echo "Y:不存在任何人都有写权限的文件，符合要求" >> ${Result}
 else
   echo "N:${checkWriteFile}文件任何人都可以写，不符合要求" >> ${Result}
-fi  
+fi
 
 #项目：文件系统-检查异常隐含文件
 #合格：Y;不合格：N;检查：C
@@ -325,21 +336,21 @@ fi
 echo "13.检查异常隐含文件中..."
 echo "***************************"
 
-echo "12.检查异常隐含文件:" >> ${Result}
-hideFile=$(find / -xdev -mount \( -name "..*" -o -name "...*" \) 2> /dev/null)
+echo "13.检查异常隐含文件:" >> ${Result}
+hideFile=$(find /usr /var -xdev -mount \( -name "..*" -o -name "...*" \) 2> /dev/null)
 if [  -z "${hideFile}" ];then
   echo "Y:不存在异常文件，符合要求" >> ${Result}
 else
   echo "N:${hideFile}是异常文件，建议审视" >> ${Result}
 fi
-  
+
 #项目：日志审计-syslog登录事件记录
 #合格：Y;不合格：N;检查：C
 
 echo "14.syslog登录事件记录中..."
 echo "***************************"
 
-echo "13.syslog登录事件记录:" >> ${Result}
+echo "14.syslog登录事件记录:" >> ${Result}
 if [  -e /etc/syslog.conf ];then
    logFile=$(cat /etc/syslog.conf | grep -V ^# | grep authpriv.*)
   if [ ! -z "${logFile}" ];then
@@ -350,14 +361,14 @@ if [  -e /etc/syslog.conf ];then
 else
   echo "N:不存在/etc/syslog.conf文件，建议对所有登录事件都记录" >> ${Result}
 fi
-  
+
 #项目：系统文件-检查日志审核功能是否开启
 #合格：Y;不合格：N;检查：C
 
 echo "15.检查日志审核功能是否开启中..."
 echo "***************************"
 
-echo "14.检查日志审核功能是否开启:" >> ${Result}
+echo "15.检查日志审核功能是否开启:" >> ${Result}
 auditdStatus=$(service auditd status 2> /dev/null)
 if [ $? = 0 ];then
   echo "Y:系统日志审核功能已开启，符合要求" >> ${Result}
@@ -372,7 +383,7 @@ fi
 echo "16.检查系统core dump状态中..."
 echo "***************************"
 
-echo "15.系统core dump状态:" >> ${Result}
+echo "16.系统core dump状态:" >> ${Result}
 limitsFile=$(cat /etc/security/limits.conf | grep -V ^# | grep core)
 if [ $? -eq 0 ];then
   soft=`cat /etc/security/limits.conf | grep -V ^# | grep core | awk {print $2}`
@@ -385,7 +396,7 @@ if [ $? -eq 0 ];then
       echo "Y:* hard core 0 已经设置" >> ${Result}
     fi
   done
-else 
+else
   echo "N:没有设置core，建议在/etc/security/limits.conf中添加* soft core 0和* hard core 0" >> ${Result}
 fi
 
@@ -394,7 +405,7 @@ echo "***************************"
 #项目：系统文件-日志文件权限
 #合格：Y;不合格：N;检查：C
 
-echo "16.检查系统日志读写权限:" >> ${Result}
+echo "17.检查系统日志读写权限:" >> ${Result}
 if [ -e /var/log/messages ];then
 	MESSAGES=`ls -l /var/log/messages | awk '{print $1}'`
 	echo "C:/var/log/messages的文件权限为：${MESSAGES:1:9}" >> ${Result}
